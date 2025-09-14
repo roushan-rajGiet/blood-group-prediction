@@ -15,7 +15,7 @@ Instructions to set up the project:
 3. Run the project
 
 ## Group Members
-- ROoushan Raj
+- Roushan Raj (Team Leader)
 - Aman Kumar Das  
 - Samir Ranajan Mahanta
   
