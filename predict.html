@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fingerprint Blood Group Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="container bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Blood Group Predictor</h1>
+            <p class="mt-2 text-gray-600">Upload a fingerprint image to predict the blood group.</p>
+        </div>
+
+        <div class="mt-8 flex flex-col items-center">
+            <!-- File Upload Input -->
+            <label class="w-full text-center cursor-pointer bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 hover:bg-gray-100 transition-colors">
+                <input type="file" id="imageInput" class="hidden" accept="image/*">
+                <div class="flex flex-col items-center">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <p class="mt-2 text-gray-500 font-medium">Click to upload or drag and drop</p>
+                    <p class="text-sm text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
+                </div>
+            </label>
+
+            <!-- Image Preview Area -->
+            <div id="imagePreviewContainer" class="mt-6 hidden w-full rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                <img id="imagePreview" src="#" alt="Image Preview" class="w-full h-auto object-cover">
+            </div>
+
+            <!-- Prediction Button -->
+            <button id="predictButton" class="mt-6 w-full flex items-center justify-center py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-transform transform hover:scale-105">
+                Predict Blood Group
+            </button>
+            
+            <!-- Prediction Result Area -->
+            <div id="resultContainer" class="mt-6 hidden w-full text-center p-4 rounded-xl bg-gray-100 shadow-sm">
+                <div id="loading" class="flex items-center justify-center space-x-2 hidden">
+                    <div class="loading-spinner"></div>
+                    <span class="text-gray-600">Predicting...</span>
+                </div>
+                <div id="result" class="text-xl font-bold text-gray-800 hidden"></div>
+                <div id="error" class="text-red-500 font-medium hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const imageInput = document.getElementById('imageInput');
+        const predictButton = document.getElementById('predictButton');
+        const imagePreview = document.getElementById('imagePreview');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const resultContainer = document.getElementById('resultContainer');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+
+        // Event listener for file input change
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreviewContainer.classList.remove('hidden');
+                    // Hide previous results
+                    resultContainer.classList.add('hidden');
+                    result.classList.add('hidden');
+                    error.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Event listener for predict button click
+        predictButton.addEventListener('click', async () => {
+            const file = imageInput.files[0];
+            if (!file) {
+                // Show a user-friendly message for no file uploaded
+                showMessage("Please upload a fingerprint image first.", 'error');
+                return;
+            }
+            
+            // Show loading state
+            predictButton.disabled = true;
+            resultContainer.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            error.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // --- IMPORTANT: This is the part that connects to your Python model ---
+            // In a real application, you would replace this URL with the URL of your
+            // backend server's prediction endpoint. 
+            const API_URL = "http://127.0.0.1:5000/predict";
+
+
+            try {
+                // Send the image data to the backend server
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.statusText}`);
+                }
+
+                // Parse the JSON response from the server
+                const data = await response.json();
+
+                // Display the prediction result
+                showMessage(`Predicted Blood Group: ${data.prediction}`, 'result');
+
+            } catch (e) {
+                // Handle any errors that occur during the fetch operation
+                console.error("Prediction failed:", e);
+                showMessage("Prediction failed. Check your server connection.", 'error');
+
+            } finally {
+                // Re-enable the predict button
+                predictButton.disabled = false;
+            }
+        });
+
+        function showMessage(message, type) {
+            resultContainer.classList.remove('hidden');
+            loading.classList.add('hidden');
+            result.classList.add('hidden');
+            error.classList.add('hidden');
+
+            if (type === 'error') {
+                error.textContent = message;
+                error.classList.remove('hidden');
+            } else {
+                result.textContent = message;
+                result.classList.remove('hidden');
+            }
+        }
+    </script>
+
+</body>
+</html>
