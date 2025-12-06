@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Group AI Predictor</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for the mock charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- For Certificate PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
+    <!-- Use Inter font (Tailwind default) -->
+    <script>
+    tailwind.config = {
+        darkMode: 'class',  // IMPORTANT
+        theme: {
+            extend: {
+                colors: {
+                    'primary': '#10b981', // Emerald green for trust/medical feel
+                    'secondary': '#374151', // Dark grey for text
+                    'background-light': '#f9fafb',
+                }
+            }
+        }
+    }
+</script>
+
+    <style>
+        /* General styling for a clean look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom scrollbar style for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-background-light text-secondary dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
+    
+
+
+    <!-- Sticky Header/Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+            <!-- Logo (Top Left) -->
+            <div class="flex items-center space-x-2">
+                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.047A12.006 12.006 0 0012 21a12.006 12.006 0 008.618-3.047zm-2.016-2.007l-4.243-4.243m0 0L8.757 15.016m0 0l-4.243-4.243"></path>
+                </svg>
+                <span class="text-xl font-bold text-secondary">BloodPredict AI</span>
+            </div>
+
+
+            <div class="fixed bottom-6 right-6 z-[100]">
+    <!-- Chat Icon Button -->
+    <button id="chat-toggle" onclick="window.toggleChat()" class="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center text-xl hover:bg-primary/90 transition duration-300">
+        <!-- Chat icon SVG -->
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+    </button>
+
+    <!-- Chat Window -->
+    <div id="chat-window" class="hidden absolute bottom-20 right-0 w-80 h-96 bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden transform transition duration-300 ease-in-out">
+        <!-- Chat Header -->
+        <div class="bg-secondary p-3 text-white flex justify-between items-center">
+            <span class="font-semibold">Blood Group Analyst (AI)</span>
+            <button onclick="window.toggleChat()" class="text-gray-300 hover:text-white">&times;</button>
+        </div>
+        
+        <!-- Messages Area -->
+        <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-3">
+            <!-- Initial Bot Message -->
+            <div class="flex justify-start">
+    <div class="bg-gray-200 text-gray-700 p-3 rounded-xl rounded-bl-none max-w-[80%] text-sm">
+        Hello, I am your Blood Group Analyst assistant. You can ask me about blood groups, compatibility, donation rules, the machine learning model, dataset, accuracy, architecture, certificate, or project details.
+    </div>
+</div>
+
+        </div>
+
+        <!-- Chat Input -->
+        <!-- NOTE: onsubmit handler calls the globally defined window.sendMessage(event) -->
+        <form id="chat-form" class="p-3 border-t flex" onsubmit="window.sendMessage(event)">
+            <input type="text" id="chat-input" placeholder="Ask a question..." class="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none" required>
+            <button type="submit" id="send-button" class="bg-primary text-white p-2 rounded-r-lg hover:bg-primary/90 disabled:bg-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+            <!-- Navigation Links (Center) -->
+            <nav class="hidden md:flex space-x-8">
+                <button id="nav-predict" class="text-secondary hover:text-primary transition duration-150 font-medium border-b-2 border-transparent">
+                    Predict Blood Group
+                </button>
+                <button id="nav-bank" class="text-secondary hover:text-primary transition duration-150 font-medium border-b-2 border-transparent">
+                    Blood Bank Info
+                </button>
+                <!-- NEW: About Us Button -->
+                <button id="nav-about" class="text-secondary hover:text-primary transition duration-150 font-medium border-b-2 border-transparent">
+                    About Us
+                </button>
+            </nav>
+
+            <!-- User Profile (Top Right) -->
+            <!-- User Profile & Theme Toggle (Top Right) -->
+<!-- User Profile & Theme Toggle (Top Right) -->
+<!-- User Profile & Theme Toggle (Top Right) -->
+<div class="flex items-center space-x-3">
+  <!-- Theme Toggle Button -->
+  <button id="theme-toggle"
+          class="w-10 h-10 rounded-full border border-primary/40 flex items-center justify-center text-xl shadow-sm hover:scale-105 hover:bg-primary/10 active:scale-95 transition-transform duration-150"
+          aria-label="Toggle dark mode">
+      <span id="theme-toggle-light-icon">🌙</span>
+      <span id="theme-toggle-dark-icon" class="hidden">☀️</span>
+  </button>
+
+  <!-- ✅ Firebase User Email / Name -->
+  <span id="profile-name" class="hidden sm:inline text-sm text-secondary font-medium dark:text-gray-200">
+    Logged-in User
+</span>
+
+<!-- Avatar button -->
+<!-- Avatar button in header -->
+<button id="profile-avatar-button"
+        class="w-10 h-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-semibold text-lg hover:ring-2 ring-primary transition duration-150 overflow-hidden">
+    <!-- Fallback initials -->
+    <span id="profile-avatar-initial">UP</span>
+    <!-- Photo (hidden until we have one) -->
+    <img id="profile-avatar-img"
+         src=""
+         alt="Profile photo"
+         class="hidden w-10 h-10 rounded-full object-cover" />
+</button>
+
+
+
+<button onclick="window.logout()" 
+        class="px-3 py-2 border border-red-400 text-red-500 text-xs sm:text-sm rounded-lg hover:bg-red-50 active:scale-95 transition">
+    Logout
+</button>
+
+</div>
+
+
+
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Prediction Section (Initial/Default View) -->
+        <section id="page-predict" class="page-content space-y-8">
+            <h1 class="text-3xl font-extrabold text-secondary tracking-tight">Fingerprint-Based Blood Group Prediction</h1>
+            <p class="text-lg text-gray-600">Securely upload a high-resolution fingerprint image to initiate the machine learning analysis and determine the predicted blood group.</p>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Prediction Input Card -->
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-100">
+                    <h2 class="text-2xl font-semibold mb-6 text-primary">Upload Fingerprint</h2>
+
+                    <label for="fingerprint-file" class="block text-sm font-medium text-gray-700 mb-2">Fingerprint Image (PNG, JPG)</label>
+                    <!-- Drop Area / File Input -->
+                    <div id="drop-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition duration-200 hover:border-primary/50 hover:bg-primary/5">
+                        <input type="file" id="fingerprint-file" accept="image/*" class="hidden" onchange="displayFileName(this)">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        <p class="mt-1 text-sm text-gray-600">Drag and drop or <span class="font-semibold text-primary">click to browse</span></p>
+                        <p id="file-name" class="text-xs text-gray-500 mt-2 truncate">No file selected.</p>
+                    </div>
+
+                    <!-- Image Preview Area -->
+                    <div id="imagePreviewContainer" class="mt-4 hidden w-full h-40 rounded-lg overflow-hidden border border-gray-200 shadow-inner">
+                        <img id="imagePreview" src="#" alt="Fingerprint Preview" class="w-full h-full object-contain bg-gray-100">
+                    </div>
+
+                    <button id="predict-button" onclick="predictBloodGroup()" class="mt-6 w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150" disabled>
+                        <span id="predict-text">Run Prediction</span>
+                        <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                    <!-- Global Error Message for Connectivity/File Issues -->
+                    <div id="error-message" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden"></div>
+                </div>
+
+                <!-- Prediction Output Card -->
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-100">
+                    <h2 class="text-2xl font-semibold mb-6 text-secondary">Prediction Results</h2>
+
+                    <!-- Initial/Loading/Error placeholder -->
+                    <div id="result-display" class="space-y-4">
+                        <div class="p-6 bg-gray-50 rounded-lg text-center border-2 border-dashed border-gray-200">
+                            <p class="text-gray-500 font-medium">The results will appear here after analysis.</p>
+                        </div>
+                    </div>
+
+                    <!-- Result Template (Populated on Success) -->
+                    <div id="prediction-result" class="hidden">
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-200">
+                            <span class="text-lg font-medium text-gray-600">Predicted Blood Group:</span>
+                            <span id="predicted-group" class="text-4xl font-extrabold text-primary"></span>
+                        </div>
+                        <div class="mt-4 space-y-2">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Rhesus Factor:</p>
+                                <span id="rhesus-factor" class="text-lg font-bold text-secondary"></span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Confidence Score:</p>
+                                <span id="confidence-score" class="text-lg font-bold text-secondary"></span>
+                            </div>
+                        </div>
+
+
+<!-- NEW: Performance Metrics Blocks -->
+<div id="metrics-blocks" class="mt-4 grid grid-cols-3 gap-3">
+    <!-- Accuracy Block -->
+    <div class="bg-primary/10 p-3 rounded-lg text-center border border-primary">
+        <p class="text-xs font-medium text-gray-700 dark:text-gray-300">Accuracy</p>
+        <p id="metric-accuracy" class="text-xl font-bold text-primary">N/A</p>
+    </div>
+    <!-- Precision Block -->
+    <div class="bg-gray-100 p-3 rounded-lg text-center border border-gray-300 dark:bg-gray-700">
+        <p class="text-xs font-medium text-gray-700 dark:text-gray-300">Precision</p>
+        <p id="metric-precision" class="text-xl font-bold text-secondary">N/A</p>
+    </div>
+    <!-- Recall Block -->
+    <div class="bg-gray-100 p-3 rounded-lg text-center border border-gray-300 dark:bg-gray-700">
+        <p class="text-xs font-medium text-gray-700 dark:text-gray-300">Recall</p>
+        <p id="metric-recall" class="text-xl font-bold text-secondary">N/A</p>
+    </div>
+</div>
+<!-- END Performance Metrics Blocks -->
+
+
+<!-- NEW: Visualization Section -->
+<div id="visualization-section" class="mt-6 pt-4 border-t border-gray-200 space-y-6">
+    <h3 class="text-xl font-semibold text-secondary">Dataset Distribution Analysis</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+        <!-- Bar Chart Card -->
+        <div class="p-4 border border-gray-200 rounded-lg h-64">
+            <h4 class="text-sm font-medium mb-2">Blood Group Distribution (Mock)</h4>
+            <!-- IMPORTANT: h-full so canvas uses card height -->
+            <canvas id="barChart" class="w-full h-full"></canvas>
+        </div>
+
+        <!-- Pie Chart Card -->
+        <div class="p-4 border border-gray-200 rounded-lg h-64">
+            <h4 class="text-sm font-medium mb-2">Rh Factor Ratio (Mock)</h4>
+            <canvas id="pieChart" class="w-full h-full"></canvas>
+        </div>
+
+    </div>
+</div>
+
+<!-- END Visualization Section -->
+
+
+
+                        <!-- NEW: More Details Button -->
+                        <button id="details-button" onclick="showMoreDetails()" class="mt-6 w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-secondary hover:bg-gray-700 focus:outline-none transition duration-150" disabled>
+                            <span id="details-text">More Details (Probability Breakdown)</span>
+                        </button>
+                        <!-- NEW: Certificate Download Button -->
+<button id="certificate-button"
+        onclick="window.downloadCertificate()"
+        class="mt-3 w-full flex justify-center py-2 px-4 border border-primary rounded-lg shadow-sm text-sm font-medium text-primary bg-white hover:bg-primary/10 focus:outline-none transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled>
+    Get Certificate (PDF)
+</button>
+
+                        <!-- NEW: Collapsible Details Section -->
+                        <div id="more-details-section" class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg hidden">
+                            <h3 class="text-base font-semibold text-secondary mb-3">Model Prediction Probabilities</h3>
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <tbody id="probability-table-body" class="bg-white divide-y divide-gray-100 text-sm">
+                                    <!-- Rows inserted by JavaScript -->
+                                </tbody>
+                            </table>
+                            <p class="mt-3 text-xs text-gray-500 italic">Accuracy metrics based on this model's internal probability distribution.</p>
+                        </div>
+
+                        <p class="mt-6 text-sm text-gray-500 italic border-t pt-4">Disclaimer: This is a predictive tool for research/educational use. Always confirm results with clinical testing.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Blood Bank Info Section (Hidden initially) -->
+        <section id="page-bank" class="page-content hidden space-y-8">
+            <h1 class="text-3xl font-extrabold text-secondary tracking-tight">Global Blood Bank Information</h1>
+            <p class="text-lg text-gray-600">Essential facts and compatibility charts for blood donation and transfusion, supporting emergency preparedness.</p>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Info Card 1: Universal Donor/Reciplient -->
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
+                    <h2 class="text-xl font-semibold text-secondary mb-2">Universal Donor</h2>
+                    <p class="text-4xl font-bold text-red-600 mb-3">O Negative (O-)</p>
+                    <p class="text-gray-600 text-sm">Can be given to almost anyone with any blood type. Crucial for emergency transfusions when a patient's blood type is unknown.</p>
+                </div>
+
+                <!-- Info Card 2: Universal Recipient -->
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                    <h2 class="text-xl font-semibold text-secondary mb-2">Universal Recipient</h2>
+                    <p class="text-4xl font-bold text-blue-600 mb-3">AB Positive (AB+)</p>
+                    <p class="text-gray-600 text-sm">Can receive blood from any other blood type, both Rh positive and negative.</p>
+                </div>
+
+                <!-- Info Card 3: Rare Blood Type -->
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500">
+                    <h2 class="text-xl font-semibold text-secondary mb-2">Always In Demand</h2>
+                    <p class="text-4xl font-bold text-yellow-600 mb-3">O and B</p>
+                    <p class="text-gray-600 text-sm">These two groups are the most commonly needed, especially O negative due to its universal donor status.</p>
+                </div>
+            </div>
+
+            <!-- Compatibility Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 
+            dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
+
+                <h2 class="text-2xl font-semibold text-secondary mb-4">ABO & Rh Compatibility Chart</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Can Donate To</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Can Receive From</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr><td class="px-6 py-4 whitespace-nowrap font-medium">A+</td><td>A+, AB+</td><td>A+, A-, O+, O-</td></tr>
+                            <tr class="bg-gray-50"><td class="px-6 py-4 whitespace-nowrap font-medium">A-</td><td>A+, A-, AB+, AB-</td><td>A-, O-</td></tr>
+                            <tr><td class="px-6 py-4 whitespace-nowrap font-medium">B+</td><td>B+, AB+</td><td>B+, B-, O+, O-</td></tr>
+                            <tr class="bg-gray-50"><td class="px-6 py-4 whitespace-nowrap font-medium">B-</td><td>B+, B-, AB+, AB-</td><td>B-, O-</td></tr>
+                            <tr><td class="px-6 py-4 whitespace-nowrap font-medium">AB+</td><td>AB+</td><td>ALL TYPES (Universal Recipient)</td></tr>
+                            <tr class="bg-gray-50"><td class="px-6 py-4 whitespace-nowrap font-medium">AB-</td><td>AB+, AB-</td><td>AB-, A-, B-, O-</td></tr>
+                            <tr><td class="px-6 py-4 whitespace-nowrap font-medium font-bold text-red-600">O+</td><td>O+, A+, B+, AB+</td><td>O+, O-</td></tr>
+                            <tr class="bg-gray-50"><td class="px-6 py-4 whitespace-nowrap font-medium font-bold text-red-600">O-</td><td>ALL TYPES (Universal Donor)</td><td>O-</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- NEW: About Us Section (Hidden initially) -->
+        <section id="page-about" class="page-content hidden space-y-8">
+            <h1 class="text-3xl font-extrabold text-secondary tracking-tight">Our Team & Vision</h1>
+            <p class="text-lg text-gray-600">This project is the result of dedicated research aimed at providing a novel, non-invasive method for blood group prediction, guided by expert supervision.</p>
+
+            <!-- Supervisor Section -->
+            <div class="bg-white p-8 rounded-xl shadow-lg border-t-4 border-secondary">
+                <h2 class="text-2xl font-semibold mb-6 text-secondary border-b pb-2">Project Supervisor</h2>
+                <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                    <img class="w-28 h-28 object-cover rounded-full shadow-md border-4 border-gray-100" 
+     src="ShiboSir.jpg" 
+     alt="Shivo Sir Profile">
+                    <!-- <img class="w-28 h-28 object-cover rounded-full shadow-md border-4 border-gray-100" 
+                         src="https://placehold.co/112x112/2c3e50/ffffff?text=Shivo+Sir" 
+                         alt="Shivo Sir Profile"> -->
+                    <div class="text-center sm:text-left">
+                        <h3 class="text-xl font-bold text-secondary">Dr. Sibo Prasad Patro, Assistant Professor, Computer Science & Engineering.</h3>
+                        <p class="text-primary font-medium mb-2">Research Lead & Supervising Faculty</p>
+                        <p class="text-gray-600">Dr. Sibo Prasad Patro provided crucial guidance, leveraging his expertise in Data Mining, AI applications, and Web Programming. His oversight was pivotal in refining the machine learning architecture and ensuring the project met rigorous academic standards.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Section -->
+            <h2 class="text-3xl font-extrabold text-primary tracking-tight pt-4">The Development Team</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                
+                <!-- Teammate 1 -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 text-center">
+                    <img class="w-28 h-28 object-cover rounded-full shadow-md border-4 border-gray-100" 
+     src="roso.jpg" 
+     alt=" Roushan Profile">
+                    <!-- <img class="w-24 h-24 object-cover rounded-full mx-auto mb-4 shadow-md border-4 border-primary/50" 
+                         src="https://placehold.co/96x96/10b981/ffffff?text=Teammate+1" 
+                         alt="Teammate 1 Profile"> -->
+                    <h3 class="text-xl font-bold text-secondary">Roushan Raj</h3>
+                    <p class="text-gray-500 mb-3"> ML Engineer & Data Scientist</p>
+                    <p class="text-gray-600 text-sm"> Designed, trained, and optimized the Convolutional Neural Network (CNN), managed the large-scale dataset, and finalized the prediction logic within the Flask API.</p>
+                </div>
+
+                <!-- Teammate 2 -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 text-center">
+                    <img class="w-28 h-28 object-cover rounded-full shadow-md border-4 border-gray-100" 
+     src="aman.jpeg" 
+     alt=" Aman Profile">
+                    <!-- <img class="w-24 h-24 object-cover rounded-full mx-auto mb-4 shadow-md border-4 border-primary/50" 
+                         src="https://placehold.co/96x96/10b981/ffffff?text=Teammate+2" 
+                         alt="Teammate 2 Profile"> -->
+                    <h3 class="text-xl font-bold text-secondary"> Aman Kumar Das</h3>
+                    <p class="text-gray-500 mb-3">Backend & API Developer</p>
+                    <p class="text-gray-600 text-sm"> Developed the Python Flask API (including the crucial /predict route), ensuring the ML model could be served efficiently and handling secure data flow and preprocessing.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 text-center">
+                    <img class="w-28 h-28 object-cover rounded-full shadow-md border-4 border-gray-100" 
+     src="Samir.jpeg" 
+     alt=" Samir Profile">
+                    <!-- <img class="w-24 h-24 object-cover rounded-full mx-auto mb-4 shadow-md border-4 border-primary/50" 
+                         src="https://placehold.co/96x96/10b981/ffffff?text=Teammate+2" 
+                         alt="Teammate 2 Profile"> -->
+                    <h3 class="text-xl font-bold text-secondary">Samir Ranjan Mahanta</h3>
+                    <p class="text-gray-500 mb-3">Front-end & UX Developer</p>
+                    <p class="text-gray-600 text-sm">Responsible for the entire user-facing web application (HTML/CSS/JS), navigation, responsive design, and integrating the API calls to display results instantly.</p>
+                </div>
+
+            </div>
+
+            
+            <!-- Floating Chatbot Button and Window (Bottom Right) -->
+
+        </section>
+        <!-- PROFILE MODAL -->
+<!-- Profile Modal (LocalStorage based) -->
+<div id="profile-modal"
+     class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[120]">
+  <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 md:p-8 relative">
+    <!-- Close button -->
+    <button id="profile-modal-close"
+            class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl leading-none">
+      &times;
+    </button>
+
+    <h2 class="text-2xl font-bold text-secondary mb-6">User Profile</h2>
+
+    <div class="flex items-center space-x-4 mb-6">
+      <!-- Big avatar -->
+      <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary overflow-hidden">
+        <span id="profile-modal-initial">O</span>
+        <img id="profile-modal-photo"
+             src=""
+             alt="Profile photo"
+             class="hidden w-16 h-16 rounded-full object-cover" />
+      </div>
+
+      <div>
+       <p id="profile-modal-name" class="text-lg font-semibold text-secondary">User</p>
+       <p id="profile-modal-email" class="text-sm text-gray-500">user@example.com</p>
+
+      </div>
+    </div>
+
+    <p class="text-sm text-gray-600 mb-4">
+      Change your profile picture (stored locally in this browser for demo purposes).
+    </p>
+
+    <!-- File chooser -->
+    <div class="flex items-center space-x-3 mb-6">
+      <label class="inline-flex items-center px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg shadow hover:bg-primary/90 cursor-pointer">
+        Choose File
+        <input type="file"
+               id="profile-image-input"
+               accept="image/*"
+               class="hidden" />
+      </label>
+      <span id="profile-file-name" class="text-xs text-gray-500">No file chosen</span>
+    </div>
+
+    <!-- Save button -->
+    <button id="profile-save-button"
+            class="w-full py-3 rounded-lg bg-primary text-white font-semibold text-lg shadow hover:bg-primary/90 transition">
+      Save
+    </button>
+
+    <p class="mt-3 text-xs text-gray-400">
+      Note: This profile image is stored in your browser only (no server storage).
+    </p>
+  </div>
+</div>
+
+
+    </main>
+
+
+    <!-- chatboat  -->
+    
+<!-- Chatbot complete -->
+<script>
+/* === LocalStorage-based profile avatar === */
+
+const PROFILE_IMAGE_KEY = 'bp_profile_image_v1';
+
+function loadProfileImageFromLocalStorage() {
+    const dataUrl = localStorage.getItem(PROFILE_IMAGE_KEY);
+    const smallImg    = document.getElementById('profile-avatar-img');
+    const smallInit   = document.getElementById('profile-avatar-initial');
+    const bigImg      = document.getElementById('profile-modal-photo');
+    const bigInit     = document.getElementById('profile-modal-initial');
+
+    if (!dataUrl || !smallImg || !bigImg) return;
+
+    // Show photo in small avatar
+    smallImg.src = dataUrl;
+    smallImg.classList.remove('hidden');
+    if (smallInit) smallInit.classList.add('hidden');
+
+    // Show photo in modal avatar
+    bigImg.src = dataUrl;
+    bigImg.classList.remove('hidden');
+    if (bigInit) bigInit.classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const avatarBtn   = document.getElementById('profile-avatar-button');
+    const modal       = document.getElementById('profile-modal');
+    const closeBtn    = document.getElementById('profile-modal-close');
+    const fileInput   = document.getElementById('profile-image-input');
+    const fileNameLbl = document.getElementById('profile-file-name');
+    const saveBtn     = document.getElementById('profile-save-button');
+
+    const modalName  = document.getElementById('profile-modal-name');
+    const modalEmail = document.getElementById('profile-modal-email');
+    const headerName = document.getElementById('profile-name');
+
+    // Initialise name/email in modal (from header text)
+    if (headerName && modalName) {
+        modalName.textContent = headerName.textContent || 'User';
+    }
+    // If you show email separately in header, you can sync it here.
+    // For now we leave modalEmail as whatever you set in your auth script.
+
+    // Open modal on avatar click
+    if (avatarBtn && modal) {
+        avatarBtn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+        });
+    }
+
+    // Close modal on × click
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+    }
+
+    // Show selected file name
+    if (fileInput && fileNameLbl) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            fileNameLbl.textContent = file ? file.name : 'No file chosen';
+        });
+    }
+
+    // Save image to localStorage
+    if (saveBtn && fileInput) {
+        saveBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please choose an image first.');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = 'Saving...';
+
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                const dataUrl = ev.target.result;
+
+                // 1) Store in localStorage
+                try {
+                    localStorage.setItem(PROFILE_IMAGE_KEY, dataUrl);
+                } catch (e) {
+                    console.error('Could not store image in localStorage:', e);
+                    alert('Image is too large to store locally. Please choose a smaller file.');
+                }
+
+                // 2) Update UI immediately
+                loadProfileImageFromLocalStorage();
+
+                // 3) Reset UI
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+                if (modal) modal.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Load any previously saved image (for this browser)
+    loadProfileImageFromLocalStorage();
+});
+</script>
+
+
+    <script>
+
+const certificateButton = document.getElementById('certificate-button');
+
+
+        // --- API & MODEL CONSTANTS (Start) ---
+// --- API & MODEL CONSTANTS (Start) ---
+// Use a Gemini model supported by your key (you can keep this name if your key supports it)
+const GEMINI_MODEL = "gemini-2.5-flash"; 
+
+// 🔑 IMPORTANT: PUT YOUR REAL GEMINI API KEY HERE
+const API_KEY = "";   // <-- set this to your actual key, otherwise it will use fallback
+
+const API_URL_GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${API_KEY}`;
+const API_URL_ML = "http://127.0.0.1:5000/predict";
+
+// --- PROJECT CONTEXT FOR THE CHATBOT ---
+const PROJECT_CONTEXT = `
+This is a final year B.Tech CSE project: "Blood Group Prediction Using Fingerprint".
+
+Objective:
+- Predict human blood group (A+, A-, B+, B-, AB+, AB-, O+, O-) from fingerprint images using Deep Learning (CNN).
+- Provide a non-invasive decision-support prototype to assist in emergency triage and research.
+
+Core ML Model:
+- Uses a Convolutional Neural Network (CNN) based on VGG16 (transfer learning).
+- Input images are resized to 224x224, normalized (0-1), and augmented with rotation, shift, zoom, shear, and horizontal flip.
+- Model output is a softmax over 8 blood group classes.
+
+Training details:
+- Stage 1: VGG16 base frozen, only top dense layers trained.
+- Stage 2: Base model unfrozen, fine-tuned with a lower learning rate.
+- Loss: categorical_crossentropy, Optimizer: Adam.
+- Achieved more than 90 percent accuracy on validation/test dataset.
+
+Backend:
+- Implemented using Python Flask.
+- An endpoint /predict receives an uploaded fingerprint image.
+- Flask loads 'blood_group_model.h5', preprocesses the image, runs model.predict, and returns JSON:
+  { prediction: "A+", probabilities: { "A+": 0.8, "A-": 0.02, ... } }
+
+Frontend:
+- Built using HTML, Tailwind CSS, and JavaScript.
+- Features:
+  - File upload with drag-and-drop + preview.
+  - Prediction display: blood group, Rh factor, confidence score.
+  - Mock charts using Chart.js: Blood Group Distribution and Rh Factor Ratio.
+  - A chatbot panel (this assistant) to answer technical and non-technical questions.
+  - Dark/light theme toggle.
+  - Diagnostic-style certificate download in PDF for the prediction (using html2canvas + jsPDF).
+
+Authentication:
+- Firebase Authentication with Email/Password.
+- login.html: sign up / login page.
+- index.html: protected; if user not logged in, redirected to login.html.
+- Logged-in user email or name is shown in the top-right header.
+
+Use-case and limitations:
+- This system is a research and educational prototype, not a replacement for clinical serological blood tests.
+- Accuracy depends on dataset quality and size.
+- Environmental factors (sensor quality, lighting, noise) affect performance.
+- In real hospitals, this could be used only as a support tool, not as final diagnostic.
+
+Team and Roles:
+- Guide: Dr. Sibo Prasad Patro, Assistant Professor, CSE.
+  Role: Provided research guidance, helped refine CNN architecture, evaluation methods, and documentation.
+
+- Student 1: Roushan Raj
+  Role: Machine Learning Engineer & Data Scientist.
+  Work: Dataset preparation, image preprocessing pipeline, CNN/VGG16 model design and training, hyperparameter tuning, integration with Flask.
+
+- Student 2: Aman Kumar Das
+  Role: Backend & API Developer.
+  Work: Flask server, /predict route, loading Keras model, handling image input from frontend, returning JSON responses, debugging deployment.
+
+- Student 3: Samir Ranjan Mahanta
+  Role: Frontend & UX Developer.
+  Work: index.html layout, Tailwind CSS based responsive design, navigation, prediction UI, charts, chatbot interface, dark theme, and certificate download component.
+
+You must answer as an expert assistant for this project and can talk about:
+- Blood groups, donation and compatibility.
+- CNN model, training process, accuracy, precision, recall, confusion matrix (conceptually).
+- Dataset, preprocessing, augmentation.
+- Flask API workflow.
+- Firebase authentication flow.
+- Frontend features including charts and certificate.
+- Project objective, limitations, future scope, and team roles.
+
+Always explain in simple, clear language suitable for a viva or project review. Do not use markdown like **bold**; answer in plain text.
+`;
+
+const CHAT_SYSTEM_INSTRUCTION = `
+You are an expert Blood Group Analyst and technical assistant for the project described in the project context.
+Use simple, clear language and stay focused on blood groups, compatibility, the ML model, the web app, and project details.
+Do not answer unrelated questions.
+Do not use markdown formatting like **bold**; respond in plain text.
+`;
+
+// --- GLOBAL STATE ---
+let lastPredictionData = null; 
+let chatHistory = [];
+
+
+
+// --- DOM References ---
+const navPredict = document.getElementById('nav-predict');
+const navBank = document.getElementById('nav-bank');
+const navAbout = document.getElementById('nav-about');
+const fileInput = document.getElementById('fingerprint-file');
+const predictButton = document.getElementById('predict-button');
+const fileNameDisplay = document.getElementById('file-name');
+const predictText = document.getElementById('predict-text');
+const loadingSpinner = document.getElementById('loading-spinner');
+const resultDisplay = document.getElementById('result-display');
+const predictionResult = document.getElementById('prediction-result');
+const errorMessage = document.getElementById('error-message');
+const imagePreview = document.getElementById('imagePreview');
+const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+const detailsButton = document.getElementById('details-button');
+const detailsSection = document.getElementById('more-details-section');
+const probabilityTableBody = document.getElementById('probability-table-body');
+
+// Chatbot DOM
+const chatWindow = document.getElementById('chat-window');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const sendButton = document.getElementById('send-button');
+
+
+// --- UTILITY FUNCTIONS ---
+
+function clearResults() {
+    resultDisplay.innerHTML = `<div class="p-6 bg-gray-50 rounded-lg text-center border-2 border-dashed border-gray-200">
+                                    <p class="text-gray-500 font-medium">The results will appear here after analysis.</p>
+                                </div>`;
+    predictionResult.classList.add('hidden');
+    detailsButton.disabled = true;
+    if (certificateButton) certificateButton.disabled = true;   // 👈 add this
+    detailsSection.classList.add('hidden');
+    lastPredictionData = null;
+}
+
+
+/**
+ * Generic function to fetch content from the Gemini API with exponential backoff.
+ */
+// --- HELPER: sanitize text (remove ** etc) ---
+function sanitizeBotText(text) {
+    if (!text) return "";
+    // remove markdown bold and backticks
+    return text.replace(/\*\*/g, "").replace(/`/g, "");
+}
+
+/**
+ * Call Gemini API with project context + chat history.
+ * Falls back to localFallback if API_KEY is missing or request fails.
+ */
+async function fetchGemini(userText) {
+    // If no API key, go directly to fallback
+    if (!API_KEY) {
+        console.warn("No Gemini API key set. Using local fallback only.");
+        return localFallback(userText);
+    }
+
+    const contents = [
+        {
+            role: "user",
+            parts: [{ text: `PROJECT CONTEXT:\n${PROJECT_CONTEXT}` }]
+        },
+        ...chatHistory,
+        {
+            role: "user",
+            parts: [{ text: userText }]
+        }
+    ];
+
+    const body = {
+        contents: contents.map(c => ({
+            role: c.role === "model" ? "model" : "user",
+            parts: c.parts
+        })),
+        systemInstruction: {
+            parts: [{ text: CHAT_SYSTEM_INSTRUCTION }]
+        }
+    };
+
+    try {
+        const response = await fetch(API_URL_GEMINI, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            console.error("Gemini API error status:", response.status);
+            return localFallback(userText);
+        }
+
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        return text ? sanitizeBotText(text) : localFallback(userText);
+    } catch (err) {
+        console.error("Gemini API call failed:", err);
+        return localFallback(userText);
+    }
+}
+
+// --- NAVIGATION LOGIC (Omitted for brevity) ---
+
+function setActivePage(pageId) {
+    document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+    document.getElementById(pageId).classList.remove('hidden');
+
+    document.querySelectorAll('nav button').forEach(button => button.classList.remove('border-primary'));
+
+    if (pageId === 'page-predict') {
+        navPredict.classList.add('border-primary');
+    } else if (pageId === 'page-bank') {
+        navBank.classList.add('border-primary');
+    } else if (pageId === 'page-about') {
+        navAbout.classList.add('border-primary');
+    }
+}
+
+// --- FILE INPUT / PREVIEW / DRAG & DROP LOGIC (Omitted for brevity) ---
+
+function displayFileName(input) {
+    const file = input.files[0];
+    errorMessage.classList.add('hidden');
+    clearResults();
+
+    if (file) {
+        fileNameDisplay.textContent = `Selected: ${file.name}`;
+        predictButton.disabled = false;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagePreview.src = e.target.result;
+            imagePreviewContainer.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+
+    } else {
+        fileNameDisplay.textContent = "No file selected.";
+        predictButton.disabled = true;
+        imagePreviewContainer.classList.add('hidden');
+    }
+}
+
+document.getElementById('drop-area').addEventListener('click', () => { fileInput.click(); });
+const dropArea = document.getElementById('drop-area');
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { dropArea.addEventListener(eventName, preventDefaults, false); });
+function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+['dragenter', 'dragover'].forEach(eventName => { dropArea.addEventListener(eventName, () => dropArea.classList.add('border-primary', 'bg-primary/5'), false); });
+['dragleave', 'drop'].forEach(eventName => { dropArea.addEventListener(eventName, () => dropArea.classList.remove('border-primary', 'bg-primary/5'), false); });
+dropArea.addEventListener('drop', (e) => {
+    let dt = e.dataTransfer;
+    let files = dt.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        displayFileName(fileInput);
+    }
+}, false);
+
+
+// --- ML PREDICTION LOGIC (Omitted for brevity) ---
+
+// --- ML PREDICTION LOGIC ---
+
+async function predictBloodGroup() {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    // UI State: Loading
+    predictButton.disabled = true;
+    predictButton.classList.add('bg-gray-400', 'hover:bg-gray-400');
+    predictButton.classList.remove('bg-primary', 'hover:bg-primary/90');
+    predictText.textContent = "Analyzing...";
+    loadingSpinner.classList.remove('hidden');
+    errorMessage.classList.add('hidden');
+
+    resultDisplay.innerHTML = `
+        <div class="p-6 bg-blue-50 rounded-lg text-center flex items-center justify-center space-x-3 border-2 border-blue-300">
+            <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-blue-700 font-medium">Processing fingerprint...</span>
+        </div>`;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        const response = await fetch(API_URL_ML, { method: 'POST', body: formData });
+
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = {};
+        }
+
+        if (!response.ok) {
+            const message =
+                data.error ||
+                data.message ||
+                `Server responded with status: ${response.status}`;
+            throw new Error(message);
+        }
+
+        if (!data.prediction) {
+            throw new Error("Prediction result was missing from the server response.");
+        }
+
+        // ✅ Prediction handling
+        lastPredictionData = data;
+        const predictedGroup = data.prediction.toUpperCase().replace(/\s/g, '');
+        const rhesus = predictedGroup.includes('+') ? 'Rh Positive' : 'Rh Negative';
+
+        let rawConfidence =
+            data.probabilities && data.probabilities[predictedGroup] != null
+                ? data.probabilities[predictedGroup]
+                : null;
+
+        const confidence =
+            rawConfidence !== null
+                ? `${(rawConfidence * 100).toFixed(2)}%`
+                : 'N/A';
+
+        document.getElementById('predicted-group').textContent = predictedGroup;
+        document.getElementById('rhesus-factor').textContent = rhesus;
+        document.getElementById('confidence-score').textContent = confidence;
+
+        resultDisplay.innerHTML = '';
+predictionResult.classList.remove('hidden');
+detailsButton.disabled = false;
+
+// ✅ Draw charts
+if (typeof drawMockCharts === 'function') {
+    console.log('Calling drawMockCharts() after prediction');
+    drawMockCharts();
+}
+
+// ✅ Enable Certificate Button after successful prediction
+const certificateButton = document.getElementById('certificate-button');
+if (certificateButton) {
+    certificateButton.disabled = false;
+}
+
+
+    } catch (e) {
+        let errorMsg = `Prediction failed: ${e.message || 'Network error'}. This usually means your ML backend server is either not running or is blocking the connection (CORS). Ensure it is running at ${API_URL_ML}.`;
+        errorMessage.textContent = errorMsg;
+        errorMessage.classList.remove('hidden');
+        resultDisplay.innerHTML = `
+            <div class="p-6 bg-red-100 rounded-lg text-center flex items-center justify-center space-x-2 border-2 border-red-300">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-red-700 font-medium">Analysis failed. See detailed error above.</p>
+            </div>`;
+        predictionResult.classList.add('hidden');
+    } finally {
+        predictButton.disabled = fileInput.files.length === 0;
+        predictButton.classList.remove('bg-gray-400', 'hover:bg-gray-400');
+        predictButton.classList.add('bg-primary', 'hover:bg-primary/90');
+        predictText.textContent = "Run Prediction";
+        loadingSpinner.classList.add('hidden');
+    }
+}
+
+// --- MORE DETAILS LOGIC (Omitted for brevity) ---
+
+window.showMoreDetails = function() {
+    if (!lastPredictionData || !lastPredictionData.probabilities) return;
+
+    const isVisible = detailsSection.classList.toggle('hidden');
+    detailsButton.textContent = isVisible ? 'More Details (Probability Breakdown)' : 'Hide Details';
+
+    if (isVisible) { return; }
+
+    probabilityTableBody.innerHTML = ''; 
+
+    const probabilities = lastPredictionData.probabilities;
+    const predictedGroup = lastPredictionData.prediction.toUpperCase().replace(/\s/g, '');
+    const sortedProbabilities = Object.entries(probabilities)
+        .sort(([, probA], [, probB]) => probB - probA); 
+
+    sortedProbabilities.forEach(([group, probability]) => {
+        const isPredicted = group === predictedGroup;
+        const row = document.createElement('tr');
+        row.className = isPredicted ? 'bg-primary/10 font-semibold' : 'hover:bg-gray-50';
+
+        const groupCell = document.createElement('td');
+        groupCell.className = 'px-3 py-2 whitespace-nowrap text-secondary';
+        groupCell.textContent = group;
+
+        const probCell = document.createElement('td');
+        probCell.className = 'px-3 py-2 whitespace-nowrap text-right';
+        probCell.textContent = `${(probability * 100).toFixed(4)}%`;
+
+        row.appendChild(groupCell);
+        row.appendChild(probCell);
+        probabilityTableBody.appendChild(row);
+    });
+};
+
+
+// --- LLM FEATURE 1: CHATBOT LOGIC ---
+
+window.toggleChat = function() {
+    chatWindow.classList.toggle('hidden');
+    if (!chatWindow.classList.contains('hidden')) {
+        chatInput.focus();
+        chatMessages.scrollTop = chatMessages.scrollHeight; 
+    }
+}
+
+function addMessage(sender, text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = `p-3 rounded-xl max-w-[80%] text-sm ${
+        sender === 'user'
+            ? 'bg-primary text-white rounded-br-none'
+            : 'bg-gray-200 text-gray-700 rounded-bl-none'
+    }`;
+    contentDiv.innerHTML = text; 
+    
+    messageDiv.appendChild(contentDiv);
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return contentDiv; 
+}
+
+window.sendMessage = async function(event) {
+    event.preventDefault();
+    const userText = chatInput.value.trim();
+    if (!userText) return;
+
+    // Show user message
+    addMessage("user", userText);
+
+    chatInput.value = "";
+    chatInput.disabled = true;
+    sendButton.disabled = true;
+
+    // Temporary "typing..." message
+    const loadingContentElement = addMessage("bot", "Thinking...");
+
+    // Store user message in history as 'user'
+    chatHistory.push({ role: "user", parts: [{ text: userText }] });
+
+    try {
+        // Get reply from Gemini (or fallback)
+        const botResponseText = await fetchGemini(userText);
+
+        // Store bot message in history
+        chatHistory.push({ role: "model", parts: [{ text: botResponseText }] });
+
+        // Update the last bot bubble
+        loadingContentElement.innerHTML = botResponseText;
+    } catch (error) {
+        console.error("Chat error:", error);
+        loadingContentElement.innerHTML = "Sorry, something went wrong while generating the answer.";
+    } finally {
+        chatInput.disabled = false;
+        sendButton.disabled = false;
+        chatInput.focus();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+};
+
+// --- LOCAL FALLBACK FUNCTION FOR CHAT (DEMO MODE) ---
+function localFallback(userQuery) {
+    const q = userQuery.toLowerCase();
+    const words = q.split(/\W+/);              // split into words
+    const hasWord = (w) => words.includes(w); // true only for full words, not parts
+
+    //  Greeting – but avoid matching "hi" inside "which"
+    if (hasWord("hi") || hasWord("hello") || hasWord("hey")) {
+        return "Hello, I am your Blood Group Analyst assistant. You can ask me about blood groups, compatibility, donation rules, the CNN model, dataset, accuracy, backend API, Firebase login, certificate, or project team.";
+    }
+
+    //  Universal donor / universal recipient / general universal question
+    if (q.includes("universal") && (q.includes("donor") || q.includes("donar"))) {
+        return "O negative (O-) is the universal donor. It can be given to almost all other blood groups in emergencies.";
+    }
+
+    if (q.includes("universal") && q.includes("recipient")) {
+        return "AB positive (AB+) is the universal recipient. A person with AB+ blood group can receive blood from all other ABO and Rh types.";
+    }
+
+    if (q.includes("universal")) {
+        return "O negative (O-) is known as the universal donor and AB positive (AB+) is known as the universal recipient.";
+    }
+
+    //  Donation rules / who can donate
+    if (
+        q.includes("donation") ||
+        q.includes("donate") ||
+        q.includes("donor") ||
+        q.includes("give blood") ||
+        q.includes("donation rules") ||
+        q.includes("who can donate")
+    ) {
+        return (
+            "Basic blood donation rules:\n" +
+            "• The donor should be healthy, typically 18–60 years old (ranges can vary by guideline), with suitable weight.\n" +
+            "• O- can donate to all groups (universal donor), but can only receive from O-.\n" +
+            "• AB+ can receive from all groups (universal recipient), but usually donates only to AB+.\n" +
+            "• Group A can donate to A and AB; group B can donate to B and AB; group O can donate to O, A, B and AB (depending on Rh factor).\n" +
+            "• Rh- donors should donate to Rh- or carefully matched patients; Rh+ patients can receive from + or - of the same group.\n" +
+            "This project uses these medical rules only for explanation – actual transfusion decisions are always taken by doctors."
+        );
+    }
+
+    // Accuracy – check this *before* the general model info
+    if (q.includes("accuracy") || q.includes("performance")) {
+        return "The model achieves more than 90 percent accuracy on the validation/test data. That means that in simple terms, more than 90 out of 100 predicted blood groups match the true labeled blood groups in the dataset.";
+    }
+
+    //  Model / CNN / algorithm description
+    if (q.includes("model") || q.includes("cnn") || q.includes("algorithm") || q.includes("deep learning")) {
+        return "We use a Convolutional Neural Network (CNN) based on a VGG16-style architecture. Each fingerprint image is resized to 224×224 pixels, normalized between 0 and 1, and then passed through multiple convolution + pooling layers. The final dense layer outputs 8 classes: A+, A-, B+, B-, AB+, AB-, O+, and O-.";
+    }
+
+    //  Dataset / data
+    if (q.includes("dataset") || q.includes("data")) {
+        return "The dataset contains fingerprint images where each image is labeled with a known blood group. Every image is resized to 224×224 pixels, converted to an array, normalized between 0 and 1, and augmented (rotation, shift, zoom, flip) to increase robustness and reduce overfitting.";
+    }
+
+    //  Preprocessing
+    if (q.includes("preprocess") || q.includes("normalization") || q.includes("resize")) {
+        return "Preprocessing steps: (1) Resize fingerprint to 224×224 pixels. (2) Convert to numeric array. (3) Divide pixel values by 255 so they lie between 0 and 1. (4) Apply augmentation such as rotation, shifting, zooming, and flipping to make the model more robust.";
+    }
+
+    // Flask / backend / API
+    if (q.includes("flask") || q.includes("backend") || q.includes("api") || q.includes("server")) {
+        return "The backend is built with Flask. The front-end sends a POST request to the /predict endpoint with the fingerprint image. Flask loads the trained Keras/TensorFlow model (blood_group_model.h5), runs prediction and returns a JSON response with the predicted blood group and the probability distribution for all 8 classes.";
+    }
+
+    //  Frontend / UI
+    if (q.includes("frontend") || q.includes("website") || q.includes("ui") || q.includes("interface")) {
+        return "The front-end uses HTML, Tailwind CSS and JavaScript. It provides fingerprint upload with preview, a prediction panel, mock charts using Chart.js, a chatbot, dark/light mode toggle, Firebase email/password authentication, and a button to download a diagnostic style certificate as a PDF.";
+    }
+
+    //  Firebase / login
+    if (q.includes("firebase") || q.includes("login") || q.includes("authentication") || q.includes("sign in") || q.includes("sign up")) {
+        return "Firebase Authentication with Email/Password is used. Users first sign up or log in through login.html. If the user is not authenticated, index.html automatically redirects back to login.html. The logged-in user’s name or email is shown in the top-right corner along with a Logout button.";
+    }
+
+    //  Workflow / how it works
+    if (q.includes("workflow") || q.includes("how does it work") || q.includes("process") || q.includes("steps")) {
+        return (
+            "Complete workflow:\n" +
+            "1. User signs up or logs in using Firebase Authentication.\n" +
+            "2. On index.html, the user uploads a fingerprint image.\n" +
+            "3. The front-end sends the image to the Flask /predict API.\n" +
+            "4. The CNN model predicts the blood group and Rh factor and returns a JSON response.\n" +
+            "5. The interface displays the predicted group, Rh factor, confidence, and mock charts.\n" +
+            "6. The user can also download a diagnostic-style certificate as a PDF with the prediction details."
+        );
+    }
+
+    //  Certificate / report / PDF
+    if (q.includes("certificate") || q.includes("pdf") || q.includes("report") || q.includes("diagnostic")) {
+        return "After prediction, the user can click a button to download a diagnostic-style certificate as a PDF. This uses html2canvas and jsPDF to capture a styled div from the page, including the predicted blood group, Rh factor, confidence score, date and project details, and then save it as a PDF file for the user.";
+    }
+
+    // ⚠️ Limitations / future scope
+    if (q.includes("limitation") || q.includes("future scope") || q.includes("improvement")) {
+        return (
+            "Limitations:\n" +
+            "- It is a research prototype and does not replace standard laboratory blood tests.\n" +
+            "- Accuracy depends on size and quality of the fingerprint dataset.\n" +
+            "- Different sensors, noise and lighting can affect prediction.\n\n" +
+            "Future scope: use larger and more diverse datasets, experiment with modern architectures like ResNet or EfficientNet, improve explainability, and integrate with hospital information systems as a decision-support tool."
+        );
+    }
+
+    // 👨‍🏫 Developer / team / guide
+    if (q.includes("developer") || q.includes("team") || q.includes("who made") || q.includes("who created") || q.includes("guide") || q.includes("supervisor")) {
+        return (
+            "Guide: Dr. Sibo Prasad Patro, Assistant Professor, Computer Science and Engineering, who provided research guidance and helped refine the model and evaluation.\n\n" +
+            "Team:\n" +
+            "- Roushan Raj: Machine Learning Engineer and Data Scientist. Designed and trained the CNN model, handled the dataset and integrated the model into the Flask API.\n" +
+            "- Aman Kumar Das: Backend and API Developer. Implemented the Flask backend, including the /predict route, model loading and response handling.\n" +
+            "- Samir Ranjan Mahanta: Front-end and UX Developer. Built the responsive UI in HTML/Tailwind/JavaScript, integrated the API, charts, chatbot and the certificate download feature."
+        );
+    }
+
+    // Default fallback
+    return "I can help you with blood group basics, compatibility and donation rules, the CNN model and training, dataset and preprocessing, Flask backend, Firebase login, charts and certificate, project objective, limitations and team details. Please ask a specific question on any of these topics.";
+}
+
+
+
+
+// --- INITIALIZATION ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Init theme first
+    initThemeFromPreference();
+
+    // Hook theme toggle button
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const current = localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            applyTheme(next);
+        });
+    }
+
+    // Pages
+    setActivePage('page-predict');
+    navPredict.addEventListener('click', () => setActivePage('page-predict'));
+    navBank.addEventListener('click', () => setActivePage('page-bank'));
+    navAbout.addEventListener('click', () => setActivePage('page-about'));
+
+    // Chat history system message
+    chatHistory.push({ role: "system", parts: [{ text: CHAT_SYSTEM_INSTRUCTION }] });
+});
+
+
+// --- THEME (DARK/LIGHT) LOGIC ---
+const THEME_STORAGE_KEY = 'bg_theme';
+
+function applyTheme(theme) {
+    const root = document.documentElement; // <html>
+    const lightIcon = document.getElementById('theme-toggle-light-icon');
+    const darkIcon = document.getElementById('theme-toggle-dark-icon');
+
+    if (theme === 'dark') {
+        root.classList.add('dark');
+        if (lightIcon && darkIcon) {
+            lightIcon.classList.add('hidden');
+            darkIcon.classList.remove('hidden');
+        }
+    } else {
+        root.classList.remove('dark');
+        if (lightIcon && darkIcon) {
+            lightIcon.classList.remove('hidden');
+            darkIcon.classList.add('hidden');
+        }
+    }
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+
+function initThemeFromPreference() {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') {
+        applyTheme(saved);
+    } else {
+        // System preference fallback
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark ? 'dark' : 'light');
+    }
+}
+let barChartInstance = null;
+let pieChartInstance = null;
+
+function drawMockCharts() {
+    console.log('✅ drawMockCharts() called');
+
+    const barCanvas = document.getElementById('barChart');
+    const pieCanvas = document.getElementById('pieChart');
+
+    if (!barCanvas || !pieCanvas) {
+        console.warn('⚠️ Canvas elements not found for charts.');
+        return;
+    }
+
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js is NOT loaded.');
+        return;
+    }
+
+    // Destroy old charts if they exist
+    if (barChartInstance) barChartInstance.destroy();
+    if (pieChartInstance) pieChartInstance.destroy();
+
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#f9fafb' : '#374151';
+    const gridColor = isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(229, 231, 235, 0.8)';
+
+    // BAR CHART
+    barChartInstance = new Chart(barCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-'],
+            datasets: [{
+                label: 'Dataset Frequency',
+                data: [35, 30, 15, 5, 7, 4, 3, 1],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+
+    // PIE CHART
+    pieChartInstance = new Chart(pieCanvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: ['Rh Positive (+)', 'Rh Negative (-)'],
+            datasets: [{
+                data: [85, 15],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: textColor }
+                }
+            }
+        }
+    });
+}
+window.downloadCertificate = async function () {
+    if (!lastPredictionData) {
+        alert("Please run a prediction first.");
+        return;
+    }
+
+    const predictedGroupEl = document.getElementById('predicted-group');
+    const confidenceEl     = document.getElementById('confidence-score');
+    const profileNameEl    = document.getElementById('profile-name');
+
+    const userName   = (profileNameEl?.textContent || "Registered User").trim();
+    const bloodGroup = predictedGroupEl?.textContent || "N/A";
+    const confidence = confidenceEl?.textContent || "N/A";
+
+    // Fill certificate fields
+    document.getElementById('cert-name').textContent        = userName;
+    document.getElementById('cert-blood-group').textContent = bloodGroup;
+    document.getElementById('cert-confidence').textContent  = confidence;
+    document.getElementById('cert-date').textContent        =
+        new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    // Simple random ID
+    document.getElementById('cert-id').textContent =
+        "BPAI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const certContainer = document.getElementById('certificate-template');
+    const certCard      = document.getElementById('certificate-card');
+
+    // Make it visible (but off-screen overlay)
+    certContainer.classList.remove('hidden');
+
+    try {
+        // Render the certificate card to canvas
+        const canvas = await html2canvas(certCard, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('landscape', 'pt', 'a4');
+
+        const pageWidth  = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const imgWidth = pageWidth - 80; // margin
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        const x = 40;
+        const y = (pageHeight - imgHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        pdf.save('BloodPredictAI_Certificate.pdf');
+    } catch (err) {
+        console.error("Certificate generation failed:", err);
+        alert("Failed to generate certificate. Please check the console.");
+    } finally {
+        // Hide template again
+        certContainer.classList.add('hidden');
+    }
+};
+
+
+
+
+    </script>
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { 
+    getAuth, 
+    onAuthStateChanged, 
+    signOut,
+    updateProfile
+  } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+  import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBAyJkSm23BYcp5-wLgd8BFsIb6RtmmZp0",
+    authDomain: "sembdprediction.firebaseapp.com",
+    projectId: "sembdprediction",
+    storageBucket: "sembdprediction.firebasestorage.app",
+    messagingSenderId: "768726991704",
+    appId: "1:768726991704:web:54c84e5b7116071dd31b2d"
+  };
+
+  const app     = initializeApp(firebaseConfig);
+  const auth    = getAuth(app);
+  const storage = getStorage(app);
+
+  // Expose logout for header button
+  window.logout = function () {
+    signOut(auth)
+      .then(() => window.location.href = 'login.html')
+      .catch(err => {
+        console.error('Logout error:', err);
+        alert('Logout failed, please try again.');
+      });
+  };
+window.logout = function () {
+  // Clear local profile photo for safety
+  localStorage.removeItem('bp_profile_image_v1');
+
+  signOut(auth)
+    .then(() => window.location.href = 'login.html')
+    .catch(err => {
+      console.error('Logout error:', err);
+      alert('Logout failed, please try again.');
+    });
+};
+
+  // --- DOM for profile / avatar ---
+  const profileNameEl    = document.getElementById('profile-name');
+  const avatarImg        = document.getElementById('profile-avatar-img');
+  const avatarFallback   = document.getElementById('profile-avatar-fallback');
+  const profileModal     = document.getElementById('profile-modal');
+  const modalAvatar      = document.getElementById('profile-modal-avatar');
+  const modalAvatarFb    = document.getElementById('profile-modal-avatar-fallback');
+  const profileEmailEl   = document.getElementById('profile-email');
+  const profileFullnameEl= document.getElementById('profile-fullname');
+  const photoInput       = document.getElementById('profile-photo-input');
+  const profileSaveBtn   = document.getElementById('profile-save-btn');
+
+  function getDisplayName(user) {
+    if (user.displayName && user.displayName.trim() !== "") return user.displayName;
+    if (user.email) return user.email.split('@')[0];
+    return "User";
+  }
+
+  function getInitials(nameOrEmail) {
+    const clean = nameOrEmail.trim();
+    if (!clean) return "U";
+    const parts = clean.split(/\s+/);
+    const firstTwo = parts.slice(0, 2).map(p => p[0].toUpperCase());
+    return firstTwo.join('') || 'U';
+  }
+
+  function applyAvatarUI(user) {
+    const name = getDisplayName(user);
+
+    // Top bar name
+    if (profileNameEl) profileNameEl.textContent = name;
+
+    // Modal text
+    if (profileFullnameEl) profileFullnameEl.textContent = name;
+    if (profileEmailEl) profileEmailEl.textContent = user.email || '';
+
+    const initials = getInitials(name);
+
+    if (user.photoURL) {
+      // Show image avatar
+      if (avatarImg) {
+        avatarImg.src = user.photoURL;
+        avatarImg.classList.remove('hidden');
+      }
+      if (avatarFallback) avatarFallback.classList.add('hidden');
+
+      if (modalAvatar) {
+        modalAvatar.src = user.photoURL;
+        modalAvatar.classList.remove('hidden');
+      }
+      if (modalAvatarFb) {
+        modalAvatarFb.textContent = initials;
+        modalAvatarFb.classList.add('hidden');
+      }
+    } else {
+      // No photo → show initials
+      if (avatarImg) avatarImg.classList.add('hidden');
+      if (avatarFallback) {
+        avatarFallback.textContent = initials;
+        avatarFallback.classList.remove('hidden');
+      }
+      if (modalAvatar) modalAvatar.classList.add('hidden');
+      if (modalAvatarFb) {
+        modalAvatarFb.textContent = initials;
+        modalAvatarFb.classList.remove('hidden');
+      }
+    }
+  }
+
+  // --- OPEN / CLOSE MODAL (called from HTML) ---
+  window.openProfileModal = function () {
+    if (profileModal) profileModal.classList.remove('hidden');
+  };
+  window.closeProfileModal = function () {
+    if (profileModal) profileModal.classList.add('hidden');
+    if (photoInput) photoInput.value = '';
+  };
+
+  // --- Handle photo upload + save to Firebase Storage ---
+  window.handleProfilePhotoChange = async function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be logged in to change profile photo.");
+      return;
+    }
+
+    try {
+      if (profileSaveBtn) {
+        profileSaveBtn.disabled = true;
+        profileSaveBtn.textContent = "Saving...";
+      }
+
+      const storageRef = ref(storage, `profilePhotos/${user.uid}.jpg`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      await updateProfile(user, { photoURL: url });
+
+      // Refresh UI with new photo
+      applyAvatarUI(user);
+      alert("Profile photo updated successfully!");
+
+    } catch (err) {
+      console.error("Profile photo upload error:", err);
+      alert("Failed to update profile photo. Check console for details.");
+    } finally {
+      if (profileSaveBtn) {
+        profileSaveBtn.disabled = false;
+        profileSaveBtn.textContent = "Save Photo";
+      }
+    }
+  };
+
+  // --- Auth guard + set profile UI ---
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+    applyAvatarUI(user);
+  });
+  //  Sync logged-in user data to Profile Modal
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        const modalName  = document.getElementById('profile-modal-name');
+        const modalEmail = document.getElementById('profile-modal-email');
+
+        // Show Name
+        modalName.textContent = user.displayName 
+            ? user.displayName 
+            : "Logged-in User";
+
+        // Show Email
+        modalEmail.textContent = user.email;
+    }
+});
+
+</script>
+
+
+<!-- Hidden certificate template used for PDF generation -->
+<div id="certificate-template"
+     class="hidden fixed inset-0 flex items-center justify-center bg-gray-200/50"
+     style="z-index: -1;">
+  <div id="certificate-card"
+       class="bg-white w-[900px] h-[600px] mx-auto rounded-xl shadow-2xl border-4 border-emerald-500 px-16 py-10 flex flex-col justify-between">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+              <svg class="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.047A12.006 12.006 0 0012 21a12.006 12.006 0 008.618-3.047zm-2.016-2.007l-4.243-4.243m0 0L8.757 15.016m0 0l-4.243-4.243"></path>
+              </svg>
+              <div>
+                  <p class="text-xs tracking-widest text-gray-500 uppercase">BloodPredict AI</p>
+                  <p class="text-xl font-bold text-gray-800">Fingerprint-based Blood Group Prediction</p>
+              </div>
+          </div>
+          <div class="text-right text-xs text-gray-500">
+              <p>Generated by: <span class="font-semibold">BloodPredict AI System</span></p>
+          </div>
+      </div>
+
+      <!-- Title -->
+      <div class="text-center mt-4">
+          <p class="tracking-[0.3em] text-xs font-semibold text-gray-500 uppercase">Certificate of Analysis</p>
+          <p class="mt-3 text-3xl font-extrabold text-emerald-600">Diagnostic Report</p>
+      </div>
+
+      <!-- Main content -->
+      <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600">This is to certify that the following blood group prediction has been
+              generated by the BloodPredict AI system based on fingerprint image analysis.</p>
+
+          <p class="mt-6 text-sm text-gray-500">Patient Name</p>
+          <p id="cert-name" class="text-2xl font-bold text-gray-800 underline decoration-emerald-500 decoration-2">
+              User Name
+          </p>
+
+          <div class="mt-8 flex justify-center space-x-16">
+              <div>
+                  <p class="text-xs text-gray-500 tracking-wider uppercase">Predicted Blood Group</p>
+                  <p id="cert-blood-group" class="mt-2 text-3xl font-extrabold text-emerald-600">AB+</p>
+              </div>
+              <div>
+                  <p class="text-xs text-gray-500 tracking-wider uppercase">Confidence Score</p>
+                  <p id="cert-confidence" class="mt-2 text-2xl font-bold text-gray-800">95.32%</p>
+              </div>
+          </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-end justify-between mt-4">
+          <div class="text-xs text-gray-500">
+              <p>Date: <span id="cert-date" class="font-medium text-gray-700">01/12/2025</span></p>
+              <p>Report ID: <span id="cert-id" class="font-mono text-gray-700">BPAI-XXXXXX</span></p>
+          </div>
+          <div class="text-right">
+              <p class="border-t border-gray-400 pt-1 text-xs text-gray-600 inline-block px-4">
+                  Authorized Automated Report<br>
+                  BloodPredict AI System
+              </p>
+          </div>
+      </div>
+  </div>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Sign Up | BloodPredict AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#10b981', // Emerald green
+                        'secondary': '#374151', // Dark grey
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: all 150ms ease-in-out;
+        }
+        .form-input:focus {
+            border-color: #10b981;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Login/Sign-up Card -->
+    <div class="w-full max-w-md bg-white p-8 md:p-10 rounded-3xl shadow-2xl border border-gray-100">
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center space-x-2 mb-4">
+                <!-- Logo Icon -->
+                <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.047A12.006 12.006 0 0012 21a12.006 12.006 0 008.618-3.047zm-2.016-2.007l-4.243-4.243m0 0L8.757 15.016m0 0l-4.243-4.243"></path>
+                </svg>
+                <h1 id="form-title" class="text-3xl font-extrabold text-secondary">Sign Up</h1>
+            </div>
+            <p id="form-subtitle" class="text-gray-600">Create your account to access the prediction platform.</p>
+        </div>
+
+        <!-- Sign Up Form (Default View) -->
+        <div id="signup-form">
+            <div class="form-group">
+                <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                <input type="text" id="signup-name" class="form-input" placeholder="e.g., Dr. Smith">
+            </div>
+            <div class="form-group">
+                <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <input type="email" id="signup-email" class="form-input" placeholder="you@example.com">
+            </div>
+            <div class="form-group">
+                <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="signup-password" class="form-input" placeholder="Min. 6 characters">
+            </div>
+            
+            <button id="signup-button" onclick="window.handleSignUp()" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150">
+                Register and Access
+            </button>
+        </div>
+
+        <!-- Login Form (Hidden by Default) -->
+        <div id="login-form" class="hidden">
+            <div class="form-group">
+                <label for="login-email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <input type="email" id="login-email" class="form-input" placeholder="you@example.com">
+            </div>
+            <div class="form-group">
+                <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="login-password" class="form-input" placeholder="Your password">
+            </div>
+
+            <!-- Forgot password link (single correct one) -->
+            <button type="button"
+                    onclick="window.handleForgotPassword()"
+                    class="mb-3 text-xs text-primary hover:underline">
+                Forgot your password?
+            </button>
+            
+            <button id="login-button" onclick="window.handleLogin()" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150">
+                Sign In
+            </button>
+        </div>
+
+        <!-- Login/Sign-up Toggle -->
+        <p class="mt-6 text-center text-sm text-gray-600">
+            <span id="toggle-text">Already have an account?</span>
+            <button onclick="window.toggleMode()" id="toggle-link" class="text-primary font-semibold hover:underline ml-1">
+                Log In
+            </button>
+        </p>
+        
+        <!-- Error Message -->
+        <div id="auth-error-message" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm hidden"></div>
+    </div>
+
+    <!-- Firebase + Auth Logic -->
+    <script type="module">
+        // ✅ Use same version for app & auth (12.6.0)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            setPersistence,
+            browserSessionPersistence,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            updateProfile
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+        // 🔹 Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAyJkSm23BYcp5-wLgd8BFsIb6RtmmZp0",
+            authDomain: "sembdprediction.firebaseapp.com",
+            projectId: "sembdprediction",
+            storageBucket: "sembdprediction.firebasestorage.app",
+            messagingSenderId: "768726991704",
+            appId: "1:768726991704:web:54c84e5b7116071dd31b2d"
+        };
+
+        // 🔹 Init Firebase + Auth
+        const app  = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Optional: session persistence (no top-level await needed)
+        setPersistence(auth, browserSessionPersistence).catch(console.error);
+
+        // --- DOM refs ---
+        const authErrorMessage = document.getElementById('auth-error-message');
+        const formTitle        = document.getElementById('form-title');
+        const formSubtitle     = document.getElementById('form-subtitle');
+        const toggleText       = document.getElementById('toggle-text');
+        const toggleLink       = document.getElementById('toggle-link');
+        const signupForm       = document.getElementById('signup-form');
+        const loginForm        = document.getElementById('login-form');
+
+        const signupName       = document.getElementById('signup-name');
+        const signupEmail      = document.getElementById('signup-email');
+        const signupPassword   = document.getElementById('signup-password');
+        const signupButton     = document.getElementById('signup-button');
+
+        const loginEmail       = document.getElementById('login-email');
+        const loginPassword    = document.getElementById('login-password');
+        const loginButton      = document.getElementById('login-button');
+
+        let currentMode = 'signup';
+
+        function displayError(msg) {
+            authErrorMessage.textContent = msg;
+            authErrorMessage.classList.remove('hidden');
+        }
+
+        function clearError() {
+            authErrorMessage.textContent = '';
+            authErrorMessage.classList.add('hidden');
+        }
+
+        function showLoading(button, text) {
+            button.disabled = true;
+            button.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>${text}</span>`;
+            button.classList.add('flex','items-center','justify-center');
+        }
+
+        function hideLoading(button, text) {
+            button.disabled = false;
+            button.textContent = text;
+            button.classList.remove('flex','items-center','justify-center');
+        }
+
+        // 🔄 Toggle login / signup card
+        window.toggleMode = function () {
+            clearError();
+            if (currentMode === 'signup') {
+                currentMode = 'login';
+                formTitle.textContent    = 'Sign In';
+                formSubtitle.textContent = 'Welcome back! Log in with your email and password.';
+                toggleText.textContent   = "Don't have an account?";
+                toggleLink.textContent   = "Sign Up";
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            } else {
+                currentMode = 'signup';
+                formTitle.textContent    = 'Sign Up';
+                formSubtitle.textContent = 'Create your account to access the prediction platform.';
+                toggleText.textContent   = "Already have an account?";
+                toggleLink.textContent   = "Log In";
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+            }
+        };
+
+        // 🟢 SIGN UP
+        window.handleSignUp = async function () {
+            clearError();
+            const name     = signupName.value.trim();
+            const email    = signupEmail.value.trim();
+            const password = signupPassword.value.trim();
+            const original = 'Register and Access';
+
+            if (name.length < 2) return displayError('Please enter a valid display name.');
+            if (!email.includes('@') || password.length < 6) {
+                return displayError('Please enter a valid email and a password (min 6 chars).');
+            }
+
+            showLoading(signupButton, 'Creating account...');
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, password);
+                if (name) {
+                    await updateProfile(cred.user, { displayName: name });
+                }
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error(err);
+                let msg = 'Registration failed. Please try a different email or password.';
+                if (err.code === 'auth/email-already-in-use') {
+                    msg = 'This email is already in use. Please log in instead.';
+                }
+                displayError(msg);
+                hideLoading(signupButton, original);
+            }
+        };
+
+        // 🔵 LOGIN
+        window.handleLogin = async function () {
+            clearError();
+            const email    = loginEmail.value.trim();
+            const password = loginPassword.value.trim();
+            const original = 'Sign In';
+
+            if (!email || !password) return displayError('Please enter both email and password.');
+
+            showLoading(loginButton, 'Signing in...');
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error(err);
+                let msg = 'Login failed. Please check your email and password.';
+                if (['auth/wrong-password','auth/user-not-found','auth/invalid-credential'].includes(err.code)) {
+                    msg = 'Invalid email or password.';
+                }
+                displayError(msg);
+                hideLoading(loginButton, original);
+            }
+        };
+
+        // 🔁 FORGOT PASSWORD
+        window.handleForgotPassword = async function () {
+            clearError();
+            const email = loginEmail.value.trim();
+            if (!email) {
+                return displayError('Please type your registered email in the email field first, then click "Forgot your password?".');
+            }
+
+            try {
+                loginButton.disabled = true;
+                loginButton.textContent = "Sending reset link...";
+                await sendPasswordResetEmail(auth, email);
+                alert(`A password reset link has been sent to ${email}. Please check your inbox and spam folder.`);
+            } catch (error) {
+                console.error("Password reset error:", error);
+                let message = "Could not send reset email. Please check the email address.";
+                if (error.code === 'auth/user-not-found') {
+                    message = "No account found with this email. Please check or sign up first.";
+                } else if (error.code === 'auth/invalid-email') {
+                    message = "Please enter a valid email address.";
+                }
+                displayError(message);
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = "Sign In";
+            }
+        };
+
+        // If user already logged in, go to main app
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+
+</body>
+</html>

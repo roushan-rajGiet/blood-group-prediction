@@ -16,9 +16,9 @@ CORS(app)  # This allows your HTML file to communicate with the server
 IMG_SIZE = (224, 224)
 class_labels = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
-# Load the pre-trained model once when the server starts
+# Load the pre-trained model once when the server starts  
 try:
-    model = load_model('blood_group_model.h5')
+    model = load_model('best_blood_group_model.h5')
     print("Model loaded successfully!")
 except Exception as e:
     print(f"Error loading model: {e}")
