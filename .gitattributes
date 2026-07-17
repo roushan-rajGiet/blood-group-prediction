@@ -1,0 +1,6 @@
+# Ignore frontend templates and static files from GitHub language calculations
+*.html linguist-vendored
+*.css linguist-vendored
+*.js linguist-vendored
+templates/* linguist-vendored
+static/* linguist-vendored
